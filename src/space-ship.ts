@@ -10,7 +10,7 @@ export type Settings = {
 };
 
 export function createSpaceShip(settings: Settings) {
-  const bulletCooldown = 250; // ms
+  const bulletCooldown = 50; // ms
   let lastBulletTime = 0;
   return {
     ...settings,
@@ -40,6 +40,13 @@ export function createSpaceShip(settings: Settings) {
       if (this.coord.y + this.size > this.canvas.height) {
         this.coord.y = this.canvas.height - this.size;
       }
+    },
+    move: function (keys: { [k in Keys]: boolean }) {
+      if (keys.ArrowUp) this.update(0, -this.speed);
+      if (keys.ArrowDown) this.update(0, this.speed);
+      if (keys.ArrowLeft) this.update(-this.speed, 0);
+      if (keys.ArrowRight) this.update(this.speed, 0);
+      if (keys.Space) this.shoot();
     },
     shoot: function () {
       const now = Date.now();

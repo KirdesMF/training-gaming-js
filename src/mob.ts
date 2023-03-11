@@ -9,7 +9,7 @@ export function createMob(settings: Settings) {
   return {
     ...settings,
     draw: function (ctx: CanvasRenderingContext2D) {
-      ctx.fillStyle = "red";
+      ctx.fillStyle = "gold";
       ctx.fillRect(this.coord.x, this.coord.y, this.size, this.size);
     },
 

@@ -1,2 +1,4 @@
+import { game } from "./game";
 import "./style.css";
-import "./game";
+
+game.start();

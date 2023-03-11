@@ -1,11 +1,15 @@
+import type { Bullet } from "./bullet";
 import { createMob, type Mob } from "./mob";
+import { createScore, type Score } from "./score";
 import { createSpaceShip, type SpaceShip } from "./space-ship";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+const div = document.querySelector(".score") as HTMLDivElement;
 
 let spaceShip: SpaceShip;
 let mobs: Mob[] = [];
+let score: Score;
 
 export function resize() {
   canvas.width = window.innerWidth;
@@ -16,12 +20,27 @@ export function clear() {
   ctx?.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-const keys = {
+function updateScore() {
+  div.textContent = `Score: ${score.getScore()}`;
+}
+
+function isColliding(bullet: Bullet, mob: Mob) {
+  return (
+    bullet.coord.x + bullet.size.w > mob.coord.x &&
+    bullet.coord.x < mob.coord.x + mob.size &&
+    bullet.coord.y + bullet.size.h > mob.coord.y &&
+    bullet.coord.y < mob.coord.y + mob.size
+  );
+}
+
+const keys: Record<Keys, boolean> = {
   ArrowUp: false,
   ArrowDown: false,
   ArrowLeft: false,
   ArrowRight: false,
   Space: false,
+  Escape: false,
+  KeyP: false,
 };
 
 function keyboardEvent(event: KeyboardEvent) {
@@ -30,8 +49,11 @@ function keyboardEvent(event: KeyboardEvent) {
   keys[code] = event.type === "keydown";
 }
 
+const minY = -25;
+const maxY = 0;
 function init() {
   resize();
+  score = createScore(0);
 
   // init player
   spaceShip = createSpaceShip({
@@ -45,10 +67,13 @@ function init() {
   // init mobs
   for (let i = 0; i < 20; i++) {
     const mob = createMob({
-      coord: { x: i * 100, y: -25 },
-      size: 25,
+      coord: {
+        x: Math.floor(Math.random() * canvas.width),
+        y: Math.floor(Math.random() * (maxY - minY + 1)) + minY,
+      },
+      size: Math.floor(Math.random() * 15) + 15,
       life: 1,
-      speed: 2,
+      speed: Math.floor(Math.random() * 3) + 1,
     });
     mobs.push(mob);
   }
@@ -59,41 +84,59 @@ function init() {
 
 function draw() {
   clear();
-  spaceShip.draw(ctx);
 
+  // space ship
+  spaceShip.draw(ctx);
+  spaceShip.move(keys);
+
+  // mobs
   for (let mob of mobs) {
     mob.draw(ctx);
     mob.update(0, mob.speed);
 
-    if (mob.life <= 0) {
-      mobs = mobs.filter((m) => m !== mob);
-    }
-
-    if (mob.coord.y > canvas.height) {
+    if (mob.life <= 0 || mob.coord.y > canvas.height) {
       mobs = mobs.filter((m) => m !== mob);
     }
 
     for (let bullet of spaceShip.bullets) {
-      if (
-        bullet.coord.x + bullet.size.w > mob.coord.x &&
-        bullet.coord.x < mob.coord.x + mob.size &&
-        bullet.coord.y + bullet.size.h > mob.coord.y &&
-        bullet.coord.y < mob.coord.y + mob.size
-      ) {
+      if (isColliding(bullet, mob)) {
         mob.life--;
         spaceShip.bullets = spaceShip.bullets.filter((b) => b !== bullet);
+        score.addScore(1);
+        updateScore();
       }
     }
   }
 
-  if (keys.ArrowUp) spaceShip.update(0, -spaceShip.speed);
-  if (keys.ArrowDown) spaceShip.update(0, spaceShip.speed);
-  if (keys.ArrowRight) spaceShip.update(spaceShip.speed, 0);
-  if (keys.ArrowLeft) spaceShip.update(-spaceShip.speed, 0);
-  if (keys.Space) spaceShip.shoot();
+  // add new mobs
+  if (mobs.length < 20) {
+    const mob = createMob({
+      coord: { x: Math.random() * canvas.width, y: -25 },
+      size: Math.floor(Math.random() * 15) + 15,
+      life: 1,
+      speed: Math.floor(Math.random() * 2) + 1,
+    });
+    mobs.push(mob);
+  }
 
   requestAnimationFrame(draw);
 }
 
-init();
-draw();
+function start() {
+  init();
+  updateScore();
+  draw();
+}
+
+function reset() {
+  spaceShip.bullets = [];
+  mobs = [];
+  score.resetScore();
+}
+
+export const game = {
+  start,
+  stop,
+  resize,
+  reset,
+};
