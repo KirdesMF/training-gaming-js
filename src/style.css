@@ -6,3 +6,7 @@ body {
   width: 100%;
   overflow: hidden;
 }
+
+canvas {
+  background-color: rgb(17, 23, 41);
+}

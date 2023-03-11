@@ -1,19 +1,20 @@
+import { createMob, type Mob } from "./mob";
+import { createSpaceShip, type SpaceShip } from "./space-ship";
+
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const ctx = canvas?.getContext("2d");
+const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+
+let spaceShip: SpaceShip;
+let mobs: Mob[] = [];
 
 export function resize() {
-  if (!canvas) return;
-
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 
-function clear() {
-  if (!canvas) return;
+export function clear() {
   ctx?.clearRect(0, 0, canvas.width, canvas.height);
 }
-
-resize();
 
 const keys = {
   ArrowUp: false,
@@ -23,68 +24,76 @@ const keys = {
   Space: false,
 };
 
-const player = {
-  coord: { x: canvas.width / 2, y: canvas.height / 2 },
-  size: 25,
-  life: 1,
-  speed: 5,
-  missile: [],
-  draw: function () {
-    if (!ctx) return;
-    ctx.fillRect(this.coord.x, this.coord.y, this.size, this.size);
-  },
-  move: function () {
-    if (keys.ArrowUp) this.coord.y -= this.speed;
-    if (keys.ArrowDown) this.coord.y += this.speed;
-    if (keys.ArrowRight) this.coord.x += this.speed;
-    if (keys.ArrowLeft) this.coord.x -= this.speed;
-    if (keys.Space) this.shoot();
-
-    if (this.coord.y < 0) this.coord.y = 0;
-    if (this.coord.x < 0) this.coord.x = 0;
-
-    if (this.coord.y + this.size > canvas.height) {
-      this.coord.y = canvas.height - this.size;
-    }
-
-    if (this.coord.x + this.size > canvas.width) {
-      this.coord.x = canvas.width - this.size;
-    }
-  },
-  shoot: function () {},
-};
-
-const missile = {
-  coord: { x: player.coord.x, y: player.coord.y },
-  size: { w: 10, h: 20 },
-  speed: 2,
-  draw: function () {
-    if (!ctx) return;
-    ctx.fillRect(this.coord.x, this.coord.y, this.size.w, this.size.h);
-  },
-  move: function () {
-    if (keys.Space) this.coord.y -= this.speed;
-  },
-};
-
-function drawGame() {
-  clear();
-  player.move();
-  player.draw();
-
-  missile.draw();
-  missile.move();
-
-  requestAnimationFrame(drawGame);
-}
-
-drawGame();
-
 function keyboardEvent(event: KeyboardEvent) {
   const code = event.code as keyof typeof keys;
   if (keys[code] === undefined) return;
   keys[code] = event.type === "keydown";
 }
 
-window.addEventListener("keydown", keyboardEvent);
-window.addEventListener("keyup", keyboardEvent);
+function init() {
+  resize();
+
+  // init player
+  spaceShip = createSpaceShip({
+    canvas,
+    coord: { x: canvas.width / 2, y: canvas.height / 2 },
+    size: 25,
+    life: 1,
+    speed: 8,
+  });
+
+  // init mobs
+  for (let i = 0; i < 20; i++) {
+    const mob = createMob({
+      coord: { x: i * 100, y: -25 },
+      size: 25,
+      life: 1,
+      speed: 2,
+    });
+    mobs.push(mob);
+  }
+
+  window.addEventListener("keydown", keyboardEvent);
+  window.addEventListener("keyup", keyboardEvent);
+}
+
+function draw() {
+  clear();
+  spaceShip.draw(ctx);
+
+  for (let mob of mobs) {
+    mob.draw(ctx);
+    mob.update(0, mob.speed);
+
+    if (mob.life <= 0) {
+      mobs = mobs.filter((m) => m !== mob);
+    }
+
+    if (mob.coord.y > canvas.height) {
+      mobs = mobs.filter((m) => m !== mob);
+    }
+
+    for (let bullet of spaceShip.bullets) {
+      if (
+        bullet.coord.x + bullet.size.w > mob.coord.x &&
+        bullet.coord.x < mob.coord.x + mob.size &&
+        bullet.coord.y + bullet.size.h > mob.coord.y &&
+        bullet.coord.y < mob.coord.y + mob.size
+      ) {
+        mob.life--;
+        spaceShip.bullets = spaceShip.bullets.filter((b) => b !== bullet);
+      }
+    }
+  }
+
+  if (keys.ArrowUp) spaceShip.update(0, -spaceShip.speed);
+  if (keys.ArrowDown) spaceShip.update(0, spaceShip.speed);
+  if (keys.ArrowRight) spaceShip.update(spaceShip.speed, 0);
+  if (keys.ArrowLeft) spaceShip.update(-spaceShip.speed, 0);
+  if (keys.Space) spaceShip.shoot();
+
+  requestAnimationFrame(draw);
+}
+
+init();
+draw();
