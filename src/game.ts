@@ -1,10 +1,6 @@
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const ctx = canvas?.getContext("2d");
 
-function logSize() {
-  console.log({ x: canvas.width, y: canvas.height });
-}
-
 export function resize() {
   if (!canvas) return;
 
@@ -24,17 +20,15 @@ const keys = {
   ArrowDown: false,
   ArrowLeft: false,
   ArrowRight: false,
+  Space: false,
 };
-
-function keyboardEvent(event: KeyboardEvent) {
-  keys[event.code as keyof typeof keys] = event.type === "keydown";
-}
 
 const player = {
   coord: { x: canvas.width / 2, y: canvas.height / 2 },
   size: 25,
   life: 1,
-  speed: 10,
+  speed: 5,
+  missile: [],
   draw: function () {
     if (!ctx) return;
     ctx.fillRect(this.coord.x, this.coord.y, this.size, this.size);
@@ -44,6 +38,7 @@ const player = {
     if (keys.ArrowDown) this.coord.y += this.speed;
     if (keys.ArrowRight) this.coord.x += this.speed;
     if (keys.ArrowLeft) this.coord.x -= this.speed;
+    if (keys.Space) this.shoot();
 
     if (this.coord.y < 0) this.coord.y = 0;
     if (this.coord.x < 0) this.coord.x = 0;
@@ -59,16 +54,37 @@ const player = {
   shoot: function () {},
 };
 
+const missile = {
+  coord: { x: player.coord.x, y: player.coord.y },
+  size: { w: 10, h: 20 },
+  speed: 2,
+  draw: function () {
+    if (!ctx) return;
+    ctx.fillRect(this.coord.x, this.coord.y, this.size.w, this.size.h);
+  },
+  move: function () {
+    if (keys.Space) this.coord.y -= this.speed;
+  },
+};
+
 function drawGame() {
   clear();
   player.move();
   player.draw();
 
+  missile.draw();
+  missile.move();
+
   requestAnimationFrame(drawGame);
 }
 
-window.addEventListener("keyup", keyboardEvent);
-window.addEventListener("keydown", keyboardEvent);
-
 drawGame();
-logSize();
+
+function keyboardEvent(event: KeyboardEvent) {
+  const code = event.code as keyof typeof keys;
+  if (keys[code] === undefined) return;
+  keys[code] = event.type === "keydown";
+}
+
+window.addEventListener("keydown", keyboardEvent);
+window.addEventListener("keyup", keyboardEvent);
