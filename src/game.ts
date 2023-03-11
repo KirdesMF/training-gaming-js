@@ -19,12 +19,6 @@ function clear() {
 
 resize();
 
-// Coordonnées
-type Point = {
-  x: number;
-  y: number;
-};
-
 const keys = {
   ArrowUp: false,
   ArrowDown: false,
